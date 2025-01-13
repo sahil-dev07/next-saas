@@ -9,13 +9,16 @@ const TransformedImage = ({ image, type, title, isTransforming, setIsTransformin
 
     const Downloadhandler = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
         e.preventDefault()
-
+        // console.log("button clicked");
+        
         download(getCldImageUrl({
             width: image?.width,
             height: image?.height,
             src: image?.publicId,
+            ...transformationConfig,
         }), title)
     }
+    // console.log( "image public id ",image?.publicId)
 
     return (
         <>

@@ -153,9 +153,10 @@ export async function getAllImage({ limit = 9, page = 1, searchQuery = '' }: {
             .skip(skipAmount)
             .limit(limit)
 
-        const totalImages: any = await Image.find(query).countDocuments
-        const savedImages = await Image.find().countDocuments
-
+        const totalImages: any = await Image.find(query).countDocuments()
+        const savedImages = await Image.find().countDocuments()
+        console.log("total Images : ",totalImages)
+        console.log("saved Images : ",savedImages)
         return {
             data: JSON.parse(JSON.stringify(images)),
             totalPage: Math.ceil(totalImages / limit),
