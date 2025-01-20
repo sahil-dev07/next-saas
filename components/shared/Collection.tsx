@@ -18,6 +18,8 @@ import { formUrlQuery } from "@/lib/utils";
 import { Button } from "../ui/button";
 
 import { Search } from "./Search";
+import { useState } from "react";
+import { Skeleton } from "../ui/skeleton";
 
 export const Collection = ({
     hasSearch = false,
@@ -32,6 +34,7 @@ export const Collection = ({
 }) => {
     const router = useRouter();
     const searchParams = useSearchParams();
+    const [isLoading, setIsLoading] = useState(false)
 
     // PAGINATION HANDLER
     const onPageChange = (action: string) => {
@@ -44,6 +47,7 @@ export const Collection = ({
         });
 
         router.push(newUrl, { scroll: false });
+        setIsLoading(false)
     };
 
     return (
@@ -56,7 +60,7 @@ export const Collection = ({
             {images.length > 0 ? (
                 <ul className="collection-list">
                     {images.map((image) => (
-                        <Card image={image} key={image._id} />
+                        <Card image={image} key={image._id} isLoading={isLoading} />
                     ))}
                 </ul>
             ) : (
@@ -65,13 +69,17 @@ export const Collection = ({
                 </div>
             )}
 
+            {/* Pagination */}
             {totalPages > 1 && (
                 <Pagination className="mt-10">
                     <PaginationContent className="flex w-full">
                         <Button
                             disabled={Number(page) <= 1}
                             className="collection-btn"
-                            onClick={() => onPageChange("prev")}
+                            onClick={() => {
+                                setIsLoading(true);
+                                onPageChange("prev")
+                            }}
                         >
                             <PaginationPrevious className="hover:bg-transparent hover:text-white" />
                         </Button>
@@ -82,7 +90,10 @@ export const Collection = ({
 
                         <Button
                             className="button w-32 bg-purple-gradient bg-cover text-white"
-                            onClick={() => onPageChange("next")}
+                            onClick={() => {
+                                setIsLoading(true);
+                                onPageChange("next")
+                            }}
                             disabled={Number(page) >= totalPages}
                         >
                             <PaginationNext className="hover:bg-transparent hover:text-white" />
@@ -94,7 +105,16 @@ export const Collection = ({
     );
 };
 
-const Card = ({ image }: { image: IImage }) => {
+const Card = ({ image, isLoading }: { image: IImage, isLoading: boolean }) => {
+    if (!image || isLoading) {
+        return (
+            <li>
+                <Skeleton className="w-full h-52 rounded-[10px] mb-4" />
+                <Skeleton className="w-full h-6 rounded-[4px] mb-2" />
+                <Skeleton className="w-8 h-8 rounded-full" />
+            </li>
+        );
+    }
     return (
         <li>
             <Link href={`/transformations/${image._id}`} className="collection-card">

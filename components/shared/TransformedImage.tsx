@@ -4,13 +4,18 @@ import Image from 'next/image'
 import React from 'react'
 import { dataUrl, debounce, download, getImageSize } from "@/lib/utils";
 import { PlaceholderValue } from "next/dist/shared/lib/get-img-props";
+import { useToast } from '../ui/use-toast';
 
 const TransformedImage = ({ image, type, title, isTransforming, setIsTransforming, transformationConfig, hasDownload = false }: TransformedImageProps) => {
-
+    const { toast } = useToast();
     const Downloadhandler = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
         e.preventDefault()
-        // console.log("button clicked");
-        
+        toast({
+            title: "Download Started!",
+            description: "The download is queued and will begin shortly.",
+            duration: 2000,
+            className: "success-toast",
+        });
         download(getCldImageUrl({
             width: image?.width,
             height: image?.height,
