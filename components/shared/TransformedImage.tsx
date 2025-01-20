@@ -13,7 +13,7 @@ const TransformedImage = ({ image, type, title, isTransforming, setIsTransformin
         toast({
             title: "Download Started!",
             description: "The download is queued and will begin shortly.",
-            duration: 2000,
+            duration: 3000,
             className: "success-toast",
         });
         download(getCldImageUrl({

@@ -20,6 +20,7 @@ import { Button } from "../ui/button";
 import { Search } from "./Search";
 import { useState } from "react";
 import { Skeleton } from "../ui/skeleton";
+import { useToast } from "../ui/use-toast";
 
 export const Collection = ({
     hasSearch = false,
@@ -35,9 +36,15 @@ export const Collection = ({
     const router = useRouter();
     const searchParams = useSearchParams();
     const [isLoading, setIsLoading] = useState(false)
+    const { toast } = useToast();
 
     // PAGINATION HANDLER
     const onPageChange = (action: string) => {
+        toast({
+            title: `${action[0].toUpperCase()+action.slice(1)} Button clicked`,
+            duration: 1000,
+            className: "success-toast",
+        });
         const pageValue = action === "next" ? Number(page) + 1 : Number(page) - 1;
 
         const newUrl = formUrlQuery({
