@@ -32,7 +32,7 @@ const Checkout = ({
             toast({
                 title: "Order placed!",
                 description: "You will receive an email confirmation",
-                duration: 5000,
+                duration: 3000,
                 className: "success-toast",
             });
         }
@@ -41,7 +41,7 @@ const Checkout = ({
             toast({
                 title: "Order canceled!",
                 description: "Continue to shop around and checkout when you're ready",
-                duration: 5000,
+                duration: 3000,
                 className: "error-toast",
             });
         }

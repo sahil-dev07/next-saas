@@ -35,6 +35,7 @@ import { getCldImageUrl } from "next-cloudinary"
 import { addImage, updateImage } from "@/lib/actions/image.actions"
 import { useRouter } from "next/navigation"
 import { InsufficientCreditsModal } from "./InsufficientCreditsModal"
+import { useToast } from "../ui/use-toast"
 
 
 export const formSchema = z.object({
@@ -57,7 +58,7 @@ const TransformationForm = ({ action, data = null, userId, creditBalance, type, 
     const [transformationConfig, setTransformationConfig] = useState(config)
     const [isPending, startTransition] = useTransition()
     const router = useRouter()
-
+    const { toast } = useToast()
     const initialValues = data && action === 'Update' ? {
         title: data.title,
         aspectRatio: data.aspectRatio,
@@ -76,8 +77,16 @@ const TransformationForm = ({ action, data = null, userId, creditBalance, type, 
 
     // 2. Define a submit handler.
     async function onSubmit(values: z.infer<typeof formSchema>) {
-
-        console.log(values)
+        if(values?.title == "" || values?.publicId == "")
+        {
+            toast({
+                title: `Add Title or Upload Image.`,
+                duration: 3000,
+                className: "error-toast",
+            });
+            return;
+        }
+        // console.log(values)
 
         setIsSubmitting(true);
 

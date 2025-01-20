@@ -21,6 +21,16 @@ const MediaUploader = ({
     type
 }: MediaUploderProps) => {
     const { toast } = useToast()
+    const handleDiscardImage = () => {
+        setImage(null); // Reset image state
+        onValueChange(""); // Reset the publicId field
+        toast({
+          title: "Image removed",
+          description: "You can upload a new image.",
+          duration: 3000,
+          className: "success-toast",
+        });
+      };
 
     const onUploadSuccessHandler = (result: any) => {
         setImage((prevState: any) => ({
@@ -36,7 +46,7 @@ const MediaUploader = ({
         toast({
             title: 'Image uploaded Successfully',
             description: 'One Credit was deducted from your account',
-            duration: 5000,
+            duration: 3000,
             className: "success-toast"
         })
     }
@@ -45,7 +55,7 @@ const MediaUploader = ({
         toast({
             title: 'Something Went Wrong, While Uploading',
             description: 'Please try again',
-            duration: 5000,
+            duration: 3000,
             className: "error-toast"
         })
     }
@@ -78,6 +88,13 @@ const MediaUploader = ({
                                     placeholder={dataUrl as PlaceholderValue}
                                 />
                             </div>
+                            <button
+                                type="button"
+                                className="discard-button bg-red-500 text-white px-4 py-2 rounded"
+                                onClick={handleDiscardImage}
+                            >
+                                Discard Image
+                            </button>
                         </>
                     ) : (
                         <div
