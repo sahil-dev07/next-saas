@@ -27,12 +27,11 @@ declare type AddImageParams = {
         height: number;
         config: any;
         secureURL: string;
-        transformationURL: string;
+        transformationUrl: string;
         aspectRatio: string | undefined;
         prompt: string | undefined;
         color: string | undefined;
     };
-    userId: string;
     path: string;
 };
 
@@ -46,12 +45,11 @@ declare type UpdateImageParams = {
         height: number;
         config: any;
         secureURL: string;
-        transformationURL: string;
+        transformationUrl: string;
         aspectRatio: string | undefined;
         prompt: string | undefined;
         color: string | undefined;
     };
-    userId: string;
     path: string;
 };
 
@@ -73,10 +71,7 @@ declare type Transformations = {
 
 // ====== TRANSACTION PARAMS
 declare type CheckoutTransactionParams = {
-    plan: string;
-    credits: number;
-    amount: number;
-    buyerId: string;
+    planId: number;
 };
 
 declare type CreateTransactionParams = {

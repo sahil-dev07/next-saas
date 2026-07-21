@@ -9,15 +9,9 @@ import { checkoutCredits } from "@/lib/actions/transaction.action";
 import { Button } from "../ui/button";
 
 const Checkout = ({
-    plan,
-    amount,
-    credits,
-    buyerId,
+    planId,
 }: {
-    plan: string;
-    amount: number;
-    credits: number;
-    buyerId: string;
+    planId: number;
 }) => {
     const { toast } = useToast();
 
@@ -48,14 +42,9 @@ const Checkout = ({
     }, [toast]);
 
     const onCheckout = async () => {
-        const transaction = {
-            plan,
-            amount,
-            credits,
-            buyerId,
-        };
-
-        await checkoutCredits(transaction);
+        // Only the planId leaves the client. Price, credits and buyer are derived
+        // server-side in checkoutCredits — no tampering surface.
+        await checkoutCredits({ planId });
     };
 
     return (
