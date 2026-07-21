@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
-import { auth } from "@clerk/nextjs" // v4: synchronous auth() (Clerk phase later moves this to /server)
+import { auth } from "@clerk/nextjs/server" // Clerk v6: async auth() from /server
 
 import User from "../Database/models/user.model"
 
@@ -124,7 +124,7 @@ export async function spendCredits() {
   try {
     await connectToDatabase()
 
-    const { userId: clerkId } = auth() // v4 synchronous
+    const { userId: clerkId } = await auth() // Clerk v6: async
     if (!clerkId) throw new Error("Not authenticated")
 
     const cost = TRANSFORMATION_CREDIT_COST // server constant, positive int

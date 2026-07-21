@@ -16,7 +16,7 @@ const h = vi.hoisted(() => ({
 }))
 
 // ── Module mocks ────────────────────────────────────────────────────────────
-vi.mock("@clerk/nextjs", () => ({ auth: h.authMock }))
+vi.mock("@clerk/nextjs/server", () => ({ auth: h.authMock }))
 
 vi.mock("@/lib/Database/mongoose", () => ({
     connectToDatabase: vi.fn().mockResolvedValue({}),
