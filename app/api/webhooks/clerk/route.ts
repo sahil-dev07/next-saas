@@ -30,9 +30,10 @@ export async function POST(req: Request) {
         });
     }
 
-    // Get the body
-    const payload = await req.json();
-    const body = JSON.stringify(payload);
+    // Svix signs the EXACT raw request bytes. Re-serializing a parsed object
+    // (JSON.stringify) can reorder keys / change whitespace and break verification,
+    // so verify against the raw text (parse from evt.data afterwards).
+    const body = await req.text();
 
     // Create a new Svix instance with your secret.
     const wh = new Webhook(WEBHOOK_SECRET);

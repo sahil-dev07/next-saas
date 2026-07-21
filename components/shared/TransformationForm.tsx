@@ -28,7 +28,7 @@ import { aspectRatioOptions, creditFee, defaultValues, transformationTypes } fro
 import { CustomField } from "./CustomField"
 import { useEffect, useState, useTransition } from "react"
 import { AspectRatioKey, debounce, deepMergeObjects } from "@/lib/utils"
-import { updateCredits } from "@/lib/actions/user.actions"
+import { spendCredits } from "@/lib/actions/user.actions"
 import MediaUploader from "./MediaUploader"
 import TransformedImage from "./TransformedImage"
 import { getCldImageUrl } from "next-cloudinary"
@@ -106,7 +106,7 @@ const TransformationForm = ({ action, data = null, userId, creditBalance, type, 
                 height: image?.height,
                 config: transformationConfig,
                 secureURL: image?.secureURL,
-                transformationURL: transformationUrl,
+                transformationUrl: transformationUrl,
                 aspectRatio: values.aspectRatio,
                 prompt: values.prompt,
                 color: values.color,
@@ -116,7 +116,6 @@ const TransformationForm = ({ action, data = null, userId, creditBalance, type, 
                 try {
                     const newImage = await addImage({
                         image: imageData,
-                        userId,
                         path: '/'
                     })
 
@@ -138,7 +137,6 @@ const TransformationForm = ({ action, data = null, userId, creditBalance, type, 
                             ...imageData,
                             _id: data._id
                         },
-                        userId,
                         path: `/transformations/${data._id}`
                     })
 
@@ -197,7 +195,20 @@ const TransformationForm = ({ action, data = null, userId, creditBalance, type, 
         setNewTransformation(null)
 
         startTransition(async () => {
-            await updateCredits(userId, creditFee)
+            // Server resolves the user from the Clerk session and atomically spends the
+            // fee with a >= floor. No user id / delta is sent from the client anymore.
+            const result = await spendCredits()
+
+            // null === insufficient credits (or not authenticated). Roll back the UI.
+            if (!result) {
+                setIsTransforming(false)
+                toast({
+                    title: "Not enough credits",
+                    description: "Buy more credits to keep transforming.",
+                    duration: 3000,
+                    className: "error-toast",
+                })
+            }
         })
     }
 

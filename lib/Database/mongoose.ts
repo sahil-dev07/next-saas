@@ -24,7 +24,14 @@ export const connectToDatabase = async () => {
 
     cached.promise = cached.promise || mongoose.connect(MONGODB_URL, { dbName: 'Imaginify', bufferCommands: false })
 
-    cached.conn = await cached.promise;
+    try {
+        cached.conn = await cached.promise;
+    } catch (error) {
+        // On failure, drop the cached rejected promise so the NEXT call retries a
+        // fresh connect instead of re-awaiting the same permanently-rejected promise.
+        cached.promise = null
+        throw error
+    }
 
     return cached.conn;
 }
