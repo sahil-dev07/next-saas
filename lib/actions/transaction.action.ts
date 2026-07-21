@@ -1,7 +1,7 @@
 "use server"
 import { redirect } from 'next/navigation'
 import Stripe from 'stripe'
-import { auth } from '@clerk/nextjs' // v4: synchronous auth()
+import { auth } from '@clerk/nextjs/server' // Clerk v6: async auth() from /server
 import { handleError } from '../utils'
 import { connectToDatabase } from '../Database/mongoose'
 import Transaction from '../Database/models/transaction.model'
@@ -19,7 +19,7 @@ export async function checkoutCredits({ planId }: CheckoutTransactionParams) {
     }
 
     // 2) Server-derived buyer — never trust a client buyerId.
-    const { userId: clerkId } = auth()
+    const { userId: clerkId } = await auth()
     if (!clerkId) throw new Error("Not authenticated")
     const buyer = await getUserById(clerkId)
     if (!buyer?._id) throw new Error("Buyer not found")

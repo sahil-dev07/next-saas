@@ -7,7 +7,7 @@ import User from "../Database/models/user.model"
 import Image from "../Database/models/image.model"
 import { redirect } from "next/navigation"
 import { v2 as cloudinary } from 'cloudinary'
-import { auth } from "@clerk/nextjs" // v4: synchronous auth()
+import { auth } from "@clerk/nextjs/server" // Clerk v6: async auth() from /server
 
 const populateUser = (query: any) => {
 
@@ -23,7 +23,7 @@ const populateUser = (query: any) => {
 // Central owner-identity source for all mutating image actions (kills IDOR):
 // ownership is always checked against this, never a client-supplied userId.
 const getAuthUser = async () => {
-    const { userId: clerkId } = auth()
+    const { userId: clerkId } = await auth()
     if (!clerkId) throw new Error("Not authenticated")
     const user = await User.findOne({ clerkId })
     if (!user) throw new Error("User not found")
