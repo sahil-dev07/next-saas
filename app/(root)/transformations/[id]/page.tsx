@@ -9,7 +9,10 @@ import { getImageById } from "@/lib/actions/image.actions";
 import { getImageSize } from "@/lib/utils";
 import { DeleteConfirmation } from "@/components/shared/DeleteConformation";
 
-const ImageDetails = async ({ params: { id } }: SearchParamProps) => {
+// Next 15: `params` is a Promise, so it can no longer be destructured in the signature —
+// the destructure moves into the body after an await.
+const ImageDetails = async ({ params }: { params: Promise<{ id: string }> }) => {
+    const { id } = await params;
     const { userId } = await auth();
 
     const image = await getImageById(id);

@@ -195,16 +195,33 @@ const TransformationForm = ({ action, data = null, userId, creditBalance, type, 
         setNewTransformation(null)
 
         startTransition(async () => {
-            // Server resolves the user from the Clerk session and atomically spends the
-            // fee with a >= floor. No user id / delta is sent from the client anymore.
-            const result = await spendCredits()
+            // try/catch is required under React 19: an unhandled rejection inside an async
+            // transition is re-thrown during render and escalates to the root error boundary
+            // (app/error.tsx), unmounting the whole form and losing the user's uploaded image.
+            // (React 18 only logged an unhandled rejection.) spendCredits() returns null on
+            // insufficient credits but THROWS on auth/DB failure — both must roll the UI back.
+            try {
+                // Server resolves the user from the Clerk session and atomically spends the
+                // fee with a >= floor. No user id / delta is sent from the client anymore.
+                const result = await spendCredits()
 
-            // null === insufficient credits (or not authenticated). Roll back the UI.
-            if (!result) {
+                // null === insufficient credits. Roll back the UI.
+                if (!result) {
+                    setIsTransforming(false)
+                    toast({
+                        title: "Not enough credits",
+                        description: "Buy more credits to keep transforming.",
+                        duration: 3000,
+                        className: "error-toast",
+                    })
+                }
+            } catch (error) {
+                // Auth expiry, DB blip, etc. Keep the form (and the upload) on screen.
                 setIsTransforming(false)
+                console.error("spendCredits failed:", error)
                 toast({
-                    title: "Not enough credits",
-                    description: "Buy more credits to keep transforming.",
+                    title: "Transformation failed",
+                    description: "Something went wrong. Please try again.",
                     duration: 3000,
                     className: "error-toast",
                 })
