@@ -16,8 +16,10 @@ export async function POST(req: Request) {
         );
     }
 
-    // Get the headers
-    const headerPayload = headers();
+    // Get the headers. Next 15: headers() returns a Promise and must be awaited. (A backward-compat
+    // shim still exposes .get() on the un-awaited Promise with a deprecation warning, but that is
+    // being removed — awaiting is the correct, future-proof form for svix verification below.)
+    const headerPayload = await headers();
     const svix_id = headerPayload.get("svix-id");
     const svix_timestamp = headerPayload.get("svix-timestamp");
     const svix_signature = headerPayload.get("svix-signature");

@@ -6,10 +6,16 @@ import Image from 'next/image'
 import Link from 'next/link'
 
 
-export default async function Home({ searchParams }: SearchParamProps) {
+// Next 15: `searchParams` is a Promise and must be awaited. Typed inline instead of via the
+// old shared `SearchParamProps` alias, which typed params/searchParams as plain (non-Promise)
+// objects — the shape Next 15's generated per-route PageProps check rejects.
+export default async function Home({ searchParams }: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
+  const resolvedSearchParams = await searchParams
 
-  const page = Number(searchParams?.page) || 1
-  const searchQuery = (searchParams?.query as string) || ''
+  const page = Number(resolvedSearchParams?.page) || 1
+  const searchQuery = (resolvedSearchParams?.query as string) || ''
 
   const images = await getAllImage({ page, searchQuery })
 

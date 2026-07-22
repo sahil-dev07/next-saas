@@ -108,10 +108,10 @@ declare type RemoveUrlQueryParams = {
     keysToRemove: string[];
 };
 
-declare type SearchParamProps = {
-    params: { id: string; type: TransformationTypeKey };
-    searchParams: { [key: string]: string | string[] | undefined };
-};
+// NOTE: the old `SearchParamProps` alias was removed in the Next 15 upgrade. It typed
+// `params`/`searchParams` as plain (non-Promise) objects, which Next 15's generated per-route
+// PageProps check rejects — both are Promises now. It also merged three different routes'
+// params into one shape. Each page now types its own awaited params/searchParams Promise inline.
 
 declare type TransformationFormProps = {
     action: "Add" | "Update";

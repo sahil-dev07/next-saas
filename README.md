@@ -1,15 +1,15 @@
 # imaginify
 
-AI-powered image transformation SaaS built with the Next.js 14 App Router. Users buy credit packs (Stripe) and spend credits on Cloudinary-backed AI transforms (restore, generative fill, object remove/recolor, background remove).
+AI-powered image transformation SaaS built with the Next.js 15 App Router. Users buy credit packs (Stripe) and spend credits on Cloudinary-backed AI transforms (restore, generative fill, object remove/recolor, background remove).
 
 ## Tech stack
 
-- **Framework:** Next.js 14 (App Router), React 18, TypeScript
+- **Framework:** Next.js 15 (App Router), React 19, TypeScript
 - **Auth:** Clerk
 - **Payments:** Stripe (credit packs)
 - **Database:** MongoDB via mongoose
 - **Media / AI:** Cloudinary (`next-cloudinary`)
-- **UI:** Tailwind CSS 3 + Radix UI / shadcn
+- **UI:** Tailwind CSS 4 + Radix UI / shadcn
 
 ## Prerequisites
 
