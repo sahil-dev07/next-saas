@@ -1,6 +1,6 @@
 'use client'
 import React from 'react'
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import Link from 'next/link'
 import Image from 'next/image'
 import { navLinks } from '@/constants'
@@ -28,6 +28,9 @@ const MobileNav = () => {
                                 <Image src={"/assets/icons/menu.svg"} alt='menu' height={32} width={32} className='cursor-pointer' />
                             </SheetTrigger>
                             <SheetContent className='sheet-content sm:w-64'>
+                                {/* Radix Dialog (Sheet) requires a Title for screen readers.
+                                    Visually hidden so the design is unchanged. */}
+                                <SheetTitle className='sr-only'>Navigation menu</SheetTitle>
                                 <>
                                     <Image src={"/assets/images/logo-text.svg"} alt='logo' height={32} width={152} className='cursor-pointer' />
 

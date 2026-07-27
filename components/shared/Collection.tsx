@@ -139,10 +139,13 @@ const Card = ({ image, isLoading }: { image: IImage, isLoading: boolean }) => {
                     <p className="p-20-semibold mr-3 line-clamp-1 text-dark-600">
                         {image.title}
                     </p>
+                    {/* Same null guard as the transformation pages: a stored image whose
+                        transformationType isn't a known key would otherwise throw on .icon —
+                        and this card renders on the public home page for every visitor. */}
                     <Image
                         src={`/assets/icons/${transformationTypes[
                             image.transformationType as TransformationTypeKey
-                        ].icon
+                        ]?.icon ?? "image.svg"
                             }`}
                         alt={image.title}
                         width={24}

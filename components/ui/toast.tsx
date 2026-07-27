@@ -77,11 +77,10 @@ const ToastClose = React.forwardRef<
   <ToastPrimitives.Close
     ref={ref}
     className={cn(
-      // focus:ring-[#3b82f6]/50 pins v3's exact default ring color here. Tailwind v4 changed the
-      // color-less ring default from blue-500/50 to currentColor (would flip this dismiss button's
-      // focus ring to gray). We use the literal v3 hex, not `ring-blue-500/50`, because v4 also
-      // remapped blue-500 to OKLCH (#3080ff) — the literal #3b82f6 keeps it pixel-identical to v3.
-      "absolute right-2 top-2 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-[#3b82f6]/50 group-hover:opacity-100 group-[.destructive]:text-red-300 group-[.destructive]:hover:text-red-50 group-[.destructive]:focus:ring-red-400 group-[.destructive]:focus:ring-offset-red-600",
+      // focus:ring-ring — use the theme ring token like every other focusable control
+      // (ToastAction, SheetContent close, etc.). Phase C had pinned a literal blue for
+      // pixel-parity with v3's accidental default; design consistency wins here.
+      "absolute right-2 top-2 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring group-hover:opacity-100 group-[.destructive]:text-red-300 group-[.destructive]:hover:text-red-50 group-[.destructive]:focus:ring-red-400 group-[.destructive]:focus:ring-offset-red-600",
       className
     )}
     toast-close=""

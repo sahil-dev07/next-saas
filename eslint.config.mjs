@@ -8,6 +8,12 @@
 // eslint.config.js ahead of .mjs, so never add a .js variant alongside this file — it would
 // silently shadow it. .mjs also matches what create-next-app@15 and the Next codemods emit.
 import { FlatCompat } from "@eslint/eslintrc";
+// Flat config requires a rule's plugin to be registered in the SAME config object.
+// FlatCompat registers @typescript-eslint for its own generated objects, but our
+// no-unused-vars rule block below lives in a separate object, so we register it there
+// too. It resolves to the same singleton module FlatCompat uses (require cache), so
+// there is no "plugin redefined" conflict.
+import tseslint from "@typescript-eslint/eslint-plugin";
 
 // import.meta.dirname requires Node >= 20.11 — satisfied by engines.node "22.x" / .nvmrc.
 const compat = new FlatCompat({ baseDirectory: import.meta.dirname });
@@ -45,6 +51,40 @@ const eslintConfig = [
     // v8 -> v9 move strictly behaviour-preserving; removing those 5 stale directives instead
     // is queued as a cleanup.
     linterOptions: { reportUnusedDisableDirectives: "off" },
+  },
+  {
+    // Plain JS/MJS (eslint.config.mjs, postcss.config.js, scripts/*.js) — the TS-aware rule
+    // below only covers .ts/.tsx, so without this the "enable no-unused-vars" goal would
+    // leave every non-TS file unchecked. Base rule here; no type information needed.
+    files: ["**/*.js", "**/*.mjs", "**/*.cjs", "**/*.jsx"],
+    rules: {
+      "no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_" },
+      ],
+    },
+  },
+  {
+    // BUGS-2: enforce no-unused-vars. The @typescript-eslint plugin is already registered
+    // for .ts/.tsx by the FlatCompat bridge above (eslint-config-next's TS override), so we
+    // switch off the base rule and enable the TS-aware one (it understands type-only usage,
+    // avoiding false positives on interfaces/imported types). Underscore-prefixed names are
+    // treated as intentionally-unused (e.g. `const [, x]` array holes, `_arg` params).
+    files: ["**/*.ts", "**/*.tsx"],
+    plugins: { "@typescript-eslint": tseslint },
+    rules: {
+      "no-unused-vars": "off",
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+          destructuredArrayIgnorePattern: "^_",
+          ignoreRestSiblings: true,
+        },
+      ],
+    },
   },
 ];
 

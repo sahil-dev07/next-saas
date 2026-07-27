@@ -26,7 +26,7 @@ export async function POST(req: Request) {
 
     // If there are no headers, error out
     if (!svix_id || !svix_timestamp || !svix_signature) {
-        return new Response("Error occured -- no svix headers", {
+        return new Response("Error occurred -- no svix headers", {
             status: 400,
         });
     }
@@ -50,22 +50,29 @@ export async function POST(req: Request) {
         }) as WebhookEvent;
     } catch (err) {
         console.error("Error verifying webhook:", err);
-        return new Response("Error occured", {
+        return new Response("Error occurred", {
             status: 400,
         });
     }
 
-    // Get the ID and type
-    const { id } = evt.data;
+    // Event type drives the handler branches below; each branch re-derives the id it needs.
     const eventType = evt.type;
 
     // CREATE
     if (eventType === "user.created") {
         const { id, email_addresses, image_url, first_name, last_name, username } = evt.data;
 
+        // Guard the array access — a user.created event with no email would otherwise
+        // throw on [0], and `email` is required+unique in the schema so createUser
+        // would fail anyway. Reject with 400 so Clerk surfaces the bad payload.
+        const email = email_addresses?.[0]?.email_address;
+        if (!email) {
+            return new Response("Error: no email address on user", { status: 400 });
+        }
+
         const user = {
             clerkId: id,
-            email: email_addresses[0].email_address,
+            email,
             username: username!,
             firstName: first_name ?? "", // Clerk v6 types these as string | null
             lastName: last_name ?? "",
@@ -113,8 +120,8 @@ export async function POST(req: Request) {
         return NextResponse.json({ message: "OK", user: deletedUser });
     }
 
-    console.log(`Webhook with and ID of ${id} and type of ${eventType}`);
-    console.log("Webhook body:", body);
-
+    // Unhandled but signature-verified event type — acknowledge so Clerk stops
+    // retrying. (Removed the prior console.log of the full raw webhook body, which
+    // leaked PII into logs.)
     return new Response("", { status: 200 });
 }

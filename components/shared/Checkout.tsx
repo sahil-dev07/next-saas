@@ -42,13 +42,30 @@ const Checkout = ({
     }, [toast]);
 
     const onCheckout = async () => {
-        // Only the planId leaves the client. Price, credits and buyer are derived
-        // server-side in checkoutCredits — no tampering surface.
-        await checkoutCredits({ planId });
+        try {
+            // Only the planId leaves the client. Price, credits and buyer are derived
+            // server-side in checkoutCredits — no tampering surface.
+            await checkoutCredits({ planId });
+        } catch (error) {
+            // checkoutCredits ends in redirect(), which signals navigation by THROWING a
+            // NEXT_REDIRECT error — rethrow it or the redirect to Stripe is swallowed and
+            // checkout silently does nothing.
+            if ((error as { digest?: string })?.digest?.startsWith("NEXT_REDIRECT")) throw error;
+
+            // Real failure (not authenticated, invalid plan, Stripe down). Without this the
+            // rejected action escalates to the root error boundary and replaces the page.
+            console.error("checkoutCredits failed:", error);
+            toast({
+                title: "Checkout failed",
+                description: "Could not start checkout. Please try again.",
+                duration: 3000,
+                className: "error-toast",
+            });
+        }
     };
 
     return (
-        <form action={onCheckout} method="POST">
+        <form action={onCheckout}>
             <section>
                 <Button
                     type="submit"

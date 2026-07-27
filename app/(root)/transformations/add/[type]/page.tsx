@@ -12,9 +12,14 @@ const AddTransformationTypePage = async ({ params }: {
 }) => {
     const { type } = await params;
     const { userId } = await auth();
-    const transformation = transformationTypes[type];
 
     if (!userId) redirect('/sign-in')
+
+    // `type` comes from the URL — the Promise type narrows it, but at runtime it can be
+    // any string (e.g. /transformations/add/bogus). Guard before dereferencing
+    // .title/.subTitle below, which would otherwise throw on an unknown type.
+    const transformation = transformationTypes[type];
+    if (!transformation) redirect('/')
 
     const user = await getUserById(userId);
 
@@ -28,7 +33,6 @@ const AddTransformationTypePage = async ({ params }: {
             <section className="mt-10">
                 <TransformationForm
                     action="Add"
-                    userId={user._id}
                     type={transformation.type as TransformationTypeKey}
                     creditBalance={user.creditBalance}
                 />

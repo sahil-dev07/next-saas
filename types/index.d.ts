@@ -115,7 +115,6 @@ declare type RemoveUrlQueryParams = {
 
 declare type TransformationFormProps = {
     action: "Add" | "Update";
-    userId: string;
     type: TransformationTypeKey;
     creditBalance: number;
     data?: IImage | null;

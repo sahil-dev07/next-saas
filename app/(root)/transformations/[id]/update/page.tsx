@@ -20,6 +20,10 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
     const transformation =
         transformationTypes[image.transformationType as TransformationTypeKey];
 
+    // Guard against a stored image whose transformationType isn't a known key —
+    // dereferencing .title/.subTitle on undefined would crash the page.
+    if (!transformation) redirect("/");
+
     return (
         <>
             <Header title={transformation.title} subtitle={transformation.subTitle} />
@@ -27,7 +31,6 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
             <section className="mt-10">
                 <TransformationForm
                     action="Update"
-                    userId={user._id}
                     type={image.transformationType as TransformationTypeKey}
                     creditBalance={user.creditBalance}
                     config={image.config}

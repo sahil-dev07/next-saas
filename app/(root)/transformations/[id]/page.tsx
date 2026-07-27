@@ -1,4 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -7,13 +8,17 @@ import TransformedImage from "@/components/shared/TransformedImage";
 import { Button } from "@/components/ui/button";
 import { getImageById } from "@/lib/actions/image.actions";
 import { getImageSize } from "@/lib/utils";
-import { DeleteConfirmation } from "@/components/shared/DeleteConformation";
+import { DeleteConfirmation } from "@/components/shared/DeleteConfirmation";
 
 // Next 15: `params` is a Promise, so it can no longer be destructured in the signature —
 // the destructure moves into the body after an await.
 const ImageDetails = async ({ params }: { params: Promise<{ id: string }> }) => {
     const { id } = await params;
     const { userId } = await auth();
+
+    // Defense-in-depth alongside the middleware route guard: never render image
+    // details for an unauthenticated caller (also required for the ownership check below).
+    if (!userId) redirect("/sign-in");
 
     const image = await getImageById(id);
 
@@ -85,7 +90,9 @@ const ImageDetails = async ({ params }: { params: Promise<{ id: string }> }) => 
                     />
                 </div>
 
-                {userId === image.author.clerkId && (
+                {/* Optional chain: deleteUser doesn't cascade to images, so an orphaned
+                    image populates `author` as null and would throw here. */}
+                {userId === image.author?.clerkId && (
                     <div className="mt-4 space-y-4">
                         <Button asChild type="button" className="submit-button capitalize">
                             <Link href={`/transformations/${image._id}/update`}>

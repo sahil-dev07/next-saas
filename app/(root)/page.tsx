@@ -1,7 +1,6 @@
 import { Collection } from '@/components/shared/Collection'
 import { navLinks } from '@/constants'
 import { getAllImage } from '@/lib/actions/image.actions'
-import { UserButton } from '@clerk/nextjs'
 import Image from 'next/image'
 import Link from 'next/link'
 
@@ -56,7 +55,6 @@ export default async function Home({ searchParams }: {
         page={page}
       />
     </section>
-    {/* <UserButton afterSignOutUrl='/' /> */}
   </>
   )
 }
