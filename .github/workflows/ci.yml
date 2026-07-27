@@ -1,0 +1,84 @@
+name: CI
+
+# Runs on PRs into the long-lived branches and on direct pushes to them, so a broken
+# commit is caught before it can reach the Vercel production deploy on `main`.
+on:
+  pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev, main]
+
+# A new push to the same branch/PR cancels the previous in-flight run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: lint · types · tests · build
+    runs-on: ubuntu-latest
+
+    env:
+      # Clerk's <ClerkProvider> requires a format-valid publishable key at prerender, so
+      # `next build` fails without one. These are DUMMY build-only values — the same ones the
+      # gitignored local .env.local carries. No real credential is needed: every route is
+      # dynamic (ƒ), so the build never opens a DB connection or calls Clerk/Stripe/Cloudinary.
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_Y2xlcmsuZXhhbXBsZS5jb20k
+      CLERK_SECRET_KEY: sk_test_dummy_ci_build_secret
+      # Prevents Next from phoning home during CI builds.
+      NEXT_TELEMETRY_DISABLED: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          # Reads .nvmrc so CI, Vercel and local development can never drift apart —
+          # the exact failure mode that bit the portfolio and mern repos.
+          node-version-file: .nvmrc
+          cache: npm
+
+      # `npm ci` (not `npm install`) so the lockfile is authoritative and the run fails if
+      # package.json and package-lock.json have drifted. Also verifies the dependency tree
+      # still resolves with NO --legacy-peer-deps, which the Next 15 / React 19 / Clerk 6
+      # pin set depends on.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint -- --max-warnings 0
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+  audit:
+    name: dependency audit
+    runs-on: ubuntu-latest
+    # Reported separately from the build gate: a newly-published advisory can appear without
+    # anyone touching the code (which is exactly what happened mid-BUGS-2), and that should
+    # surface loudly without blocking an unrelated PR on a transitive issue with no fix yet.
+    continue-on-error: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: npm audit (high and above)
+        run: npm audit --audit-level=high
