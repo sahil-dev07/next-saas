@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs";
+import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 
 import Header from "@/components/shared/Header";
@@ -7,8 +7,10 @@ import { transformationTypes } from "@/constants";
 import { getUserById } from "@/lib/actions/user.actions";
 import { getImageById } from "@/lib/actions/image.actions";
 
-const Page = async ({ params: { id } }: SearchParamProps) => {
-    const { userId } = auth();
+// Next 15: `params` is a Promise — destructure after awaiting, not in the signature.
+const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
+    const { id } = await params;
+    const { userId } = await auth();
 
     if (!userId) redirect("/sign-in");
 
@@ -18,6 +20,10 @@ const Page = async ({ params: { id } }: SearchParamProps) => {
     const transformation =
         transformationTypes[image.transformationType as TransformationTypeKey];
 
+    // Guard against a stored image whose transformationType isn't a known key —
+    // dereferencing .title/.subTitle on undefined would crash the page.
+    if (!transformation) redirect("/");
+
     return (
         <>
             <Header title={transformation.title} subtitle={transformation.subTitle} />
@@ -25,7 +31,6 @@ const Page = async ({ params: { id } }: SearchParamProps) => {
             <section className="mt-10">
                 <TransformationForm
                     action="Update"
-                    userId={user._id}
                     type={image.transformationType as TransformationTypeKey}
                     creditBalance={user.creditBalance}
                     config={image.config}

@@ -27,12 +27,11 @@ declare type AddImageParams = {
         height: number;
         config: any;
         secureURL: string;
-        transformationURL: string;
+        transformationUrl: string;
         aspectRatio: string | undefined;
         prompt: string | undefined;
         color: string | undefined;
     };
-    userId: string;
     path: string;
 };
 
@@ -46,12 +45,11 @@ declare type UpdateImageParams = {
         height: number;
         config: any;
         secureURL: string;
-        transformationURL: string;
+        transformationUrl: string;
         aspectRatio: string | undefined;
         prompt: string | undefined;
         color: string | undefined;
     };
-    userId: string;
     path: string;
 };
 
@@ -73,10 +71,7 @@ declare type Transformations = {
 
 // ====== TRANSACTION PARAMS
 declare type CheckoutTransactionParams = {
-    plan: string;
-    credits: number;
-    amount: number;
-    buyerId: string;
+    planId: number;
 };
 
 declare type CreateTransactionParams = {
@@ -113,14 +108,13 @@ declare type RemoveUrlQueryParams = {
     keysToRemove: string[];
 };
 
-declare type SearchParamProps = {
-    params: { id: string; type: TransformationTypeKey };
-    searchParams: { [key: string]: string | string[] | undefined };
-};
+// NOTE: the old `SearchParamProps` alias was removed in the Next 15 upgrade. It typed
+// `params`/`searchParams` as plain (non-Promise) objects, which Next 15's generated per-route
+// PageProps check rejects — both are Promises now. It also merged three different routes'
+// params into one shape. Each page now types its own awaited params/searchParams Promise inline.
 
 declare type TransformationFormProps = {
     action: "Add" | "Update";
-    userId: string;
     type: TransformationTypeKey;
     creditBalance: number;
     data?: IImage | null;
