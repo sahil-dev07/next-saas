@@ -18,7 +18,7 @@ export interface IImage extends Document {
         lastName: String
     }
     createdAt?: Date;
-    updateAt?: Date;
+    updatedAt?: Date;
 }
 
 
@@ -35,9 +35,11 @@ const ImageSchema = new Schema({
     color: { type: String },
     prompt: { type: String },
     author: { type: Schema.Types.ObjectId, ref: 'User' },
-    createdAt: { type: Date, default: Date.now },
-    updateAt: { type: Date, default: Date.now }
-})
+}, { timestamps: true })
+// `timestamps: true` lets mongoose manage createdAt + updatedAt automatically. This
+// replaces the hand-rolled fields, one of which was misspelled `updateAt` (no 'd') —
+// so `getUserImages`' `.sort({ updatedAt: -1 })` sorted on a non-existent field and
+// silently no-op'd. The canonical `updatedAt` now exists and updates on every write.
 
 
 const Image = models?.Image || model("Image", ImageSchema);

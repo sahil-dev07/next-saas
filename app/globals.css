@@ -1,6 +1,12 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Tailwind v4 entrypoint.
+   - `@import "tailwindcss"` replaces the old three `@tailwind` directives.
+   - `@import "tw-animate-css"` replaces the `tailwindcss-animate` JS plugin (animate-in/out,
+     fade, zoom, slide utilities used by the Radix/shadcn ui components).
+   - `@config` bridges the existing v3-style JS config (colors, backgroundImage, borderRadius,
+     keyframes, darkMode:"class") so the theme is preserved without a full CSS-first `@theme` port. */
+@import "tailwindcss";
+@import "tw-animate-css";
+@config "../tailwind.config.ts";
 
 @layer base {
   :root {
@@ -89,103 +95,110 @@
 }
 
 /* ========================================== TAILWIND STYLES */
+
+/* Custom utilities that are `@apply`-ed by other rules (and used with variants such as
+   `sm:flex-center`) MUST be registered as v4 `@utility` — a plain class inside `@layer
+   utilities` is not applyable in v4. Page/composite classes below stay as regular CSS. */
+
+/* ===== UTILITIES */
+@utility wrapper {
+  @apply max-w-5xl mx-auto px-5 md:px-10 w-full text-dark-400 p-16-regular;
+}
+
+@utility gradient-text {
+  @apply bg-purple-gradient bg-cover bg-clip-text text-transparent;
+}
+
+/* ===== ALIGNMENTS */
+@utility flex-center {
+  @apply flex justify-center items-center;
+}
+
+@utility flex-between {
+  @apply flex justify-between items-center;
+}
+
+/* ===== TYPOGRAPHY */
+/* 44 */
+@utility h1-semibold {
+  @apply text-[36px] font-semibold sm:text-[44px] leading-[120%] sm:leading-[56px];
+}
+
+/* 36 */
+@utility h2-bold {
+  @apply text-[30px] font-bold md:text-[36px] leading-[110%];
+}
+
+/* 30 */
+@utility h3-bold {
+  @apply font-bold text-[30px] leading-[140%];
+}
+
+/* 24 */
+@utility p-24-bold {
+  @apply font-bold text-[24px] leading-[120%];
+}
+
+/* 20 */
+@utility p-20-semibold {
+  @apply font-semibold text-[20px] leading-[140%];
+}
+
+@utility p-20-regular {
+  @apply font-normal text-[20px] leading-[140%];
+}
+
+/* 18 */
+@utility p-18-semibold {
+  @apply font-semibold text-[18px] leading-[140%];
+}
+
+/* 16 */
+@utility p-16-semibold {
+  @apply font-semibold text-[16px] leading-[140%];
+}
+
+@utility p-16-medium {
+  @apply font-medium text-[16px] leading-[140%];
+}
+
+@utility p-16-regular {
+  @apply font-normal text-[16px] leading-[140%];
+}
+
+/* 14 */
+@utility p-14-medium {
+  @apply font-medium text-[14px] leading-[120%];
+}
+
+/* 10 */
+@utility p-10-medium {
+  @apply font-medium text-[10px] leading-[140%];
+}
+
+/* ===== SHADCN OVERRIDE (applied by .collection-btn, so must be a @utility) */
+/* v4: trailing `!important` on @apply is unsupported; each utility carries a `!` suffix. */
+@utility button {
+  @apply py-4! px-6! flex-center! gap-3! rounded-full! p-16-semibold! focus-visible:ring-offset-0! focus-visible:ring-transparent!;
+}
+
+/* ========================================== PAGE / COMPONENT STYLES */
 @layer utilities {
-
-  /* ===== UTILITIES */
-  .wrapper {
-    @apply max-w-5xl mx-auto px-5 md:px-10 w-full text-dark-400 p-16-regular;
-  }
-
-  .gradient-text {
-    @apply bg-purple-gradient bg-cover bg-clip-text text-transparent;
-  }
-
-  /* ===== ALIGNMENTS */
-  .flex-center {
-    @apply flex justify-center items-center;
-  }
-
-  .flex-between {
-    @apply flex justify-between items-center;
-  }
-
-  /* ===== TYPOGRAPHY */
-  /* 44 */
-  .h1-semibold {
-    @apply text-[36px] font-semibold sm:text-[44px] leading-[120%] sm:leading-[56px];
-  }
-
-  /* 36 */
-  .h2-bold {
-    @apply text-[30px] font-bold md:text-[36px] leading-[110%];
-  }
-
-  /* 30 */
-  .h3-bold {
-    @apply font-bold text-[30px] leading-[140%];
-  }
-
-  /* 24 */
-  .p-24-bold {
-    @apply font-bold text-[24px] leading-[120%];
-  }
-
-  /* 20 */
-  .p-20-semibold {
-    @apply font-semibold text-[20px] leading-[140%];
-  }
-
-  .p-20-regular {
-    @apply font-normal text-[20px] leading-[140%];
-  }
-
-  /* 18 */
-  .p-18-semibold {
-    @apply font-semibold text-[18px] leading-[140%];
-  }
-
-  /* 16 */
-  .p-16-semibold {
-    @apply font-semibold text-[16px] leading-[140%];
-  }
-
-  .p-16-medium {
-    @apply font-medium text-[16px] leading-[140%];
-  }
-
-  .p-16-regular {
-    @apply font-normal text-[16px] leading-[140%];
-  }
-
-  /* 14 */
-  .p-14-medium {
-    @apply font-medium text-[14px] leading-[120%];
-  }
-
-  /* 10 */
-  .p-10-medium {
-    @apply font-medium text-[10px] leading-[140%];
-  }
-
-  /* =====  SHADCN OVERRIDES */
-  .button {
-    @apply py-4 px-6 flex-center gap-3 rounded-full p-16-semibold focus-visible:ring-offset-0 focus-visible:ring-transparent !important;
-  }
 
   .dropdown-content {
     @apply shadow-lg rounded-md overflow-hidden p-0;
   }
 
   .dropdown-item {
-    @apply p-16-semibold text-dark-700 cursor-pointer transition-all px-4 py-3 rounded-none outline-none hover:border-none focus-visible:ring-transparent hover:text-white hover:bg-purple-gradient hover:bg-cover focus-visible:ring-offset-0 focus-visible:outline-none !important;
+    @apply p-16-semibold! text-dark-700! cursor-pointer! transition-all! px-4! py-3! rounded-none! outline-hidden! hover:border-none! focus-visible:ring-transparent! hover:text-white! hover:bg-purple-gradient! hover:bg-cover! focus-visible:ring-offset-0! focus-visible:outline-hidden!;
   }
 
   .input-field {
-    @apply rounded-[16px] border-2 border-purple-200/20 shadow-sm shadow-purple-200/15 text-dark-600 disabled:opacity-100 p-16-semibold h-[50px] md:h-[54px] focus-visible:ring-offset-0 px-4 py-3 focus-visible:ring-transparent !important;
+    @apply rounded-[16px]! border-2! border-purple-200/20! shadow-xs! shadow-purple-200/15! text-dark-600! disabled:opacity-100! p-16-semibold! h-[50px]! md:h-[54px]! focus-visible:ring-offset-0! px-4! py-3! focus-visible:ring-transparent!;
   }
 
   .search-field {
-    @apply border-0 bg-transparent text-dark-600 w-full placeholder:text-dark-400 h-[50px] p-16-medium focus-visible:ring-offset-0 p-3 focus-visible:ring-transparent !important;
+    @apply border-0! bg-transparent! text-dark-600! w-full! placeholder:text-dark-400! h-[50px]! p-16-medium! focus-visible:ring-offset-0! p-3! focus-visible:ring-transparent!;
   }
 
   .submit-button {
@@ -193,11 +206,11 @@
   }
 
   .select-field {
-    @apply w-full border-2 border-purple-200/20 shadow-sm shadow-purple-200/15 rounded-[16px] h-[50px] md:h-[54px] text-dark-600 p-16-semibold disabled:opacity-100 placeholder:text-dark-400/50 px-4 py-3 focus:ring-offset-0 focus-visible:ring-transparent focus:ring-transparent focus-visible:ring-0 focus-visible:outline-none !important;
+    @apply w-full! border-2! border-purple-200/20! shadow-xs! shadow-purple-200/15! rounded-[16px]! h-[50px]! md:h-[54px]! text-dark-600! p-16-semibold! disabled:opacity-100! placeholder:text-dark-400/50! px-4! py-3! focus:ring-offset-0! focus-visible:ring-transparent! focus:ring-transparent! focus-visible:ring-0! focus-visible:outline-hidden!;
   }
 
   .select-trigger {
-    @apply flex items-center gap-2 py-5 capitalize focus-visible:outline-none;
+    @apply flex items-center gap-2 py-5 capitalize focus-visible:outline-hidden;
   }
 
   .select-item {
@@ -205,11 +218,11 @@
   }
 
   .IconButton {
-    @apply focus-visible:ring-transparent focus:ring-offset-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:border-none !important;
+    @apply focus-visible:ring-transparent! focus:ring-offset-0! focus-visible:ring-offset-0! focus-visible:outline-hidden! focus-visible:border-none!;
   }
 
   .sheet-content button {
-    @apply focus:ring-0 focus-visible:ring-transparent focus:ring-offset-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:border-none !important;
+    @apply focus:ring-0! focus-visible:ring-transparent! focus:ring-offset-0! focus-visible:ring-offset-0! focus-visible:outline-hidden! focus-visible:border-none!;
   }
 
   .success-toast {
@@ -222,11 +235,11 @@
 
   /* Home Page */
   .home {
-    @apply sm:flex-center hidden h-72 flex-col gap-4 rounded-[20px] border bg-banner bg-cover bg-no-repeat p-10 shadow-inner;
+    @apply sm:flex-center hidden h-72 flex-col gap-4 rounded-[20px] border bg-banner bg-cover bg-no-repeat p-10 inset-shadow-sm;
   }
 
   .home-heading {
-    @apply h1-semibold max-w-[500px] flex-wrap text-center text-white shadow-sm;
+    @apply h1-semibold max-w-[500px] flex-wrap text-center text-white shadow-xs;
   }
 
   /* Credits Page */
@@ -291,11 +304,11 @@
   }
 
   .media-uploader_cta {
-    @apply flex-center flex h-72 cursor-pointer flex-col gap-5 rounded-[16px] border border-dashed bg-purple-100/20 shadow-inner;
+    @apply flex-center flex h-72 cursor-pointer flex-col gap-5 rounded-[16px] border border-dashed bg-purple-100/20 inset-shadow-sm;
   }
 
   .media-uploader_cta-image {
-    @apply rounded-[16px] bg-white p-5 shadow-sm shadow-purple-200/50;
+    @apply rounded-[16px] bg-white p-5 shadow-xs shadow-purple-200/50;
   }
 
   /* Navbar Component */
@@ -309,7 +322,7 @@
 
   /* Search Component */
   .search {
-    @apply flex w-full rounded-[16px] border-2 border-purple-200/20 bg-white px-4 shadow-sm shadow-purple-200/15 md:max-w-96;
+    @apply flex w-full rounded-[16px] border-2 border-purple-200/20 bg-white px-4 shadow-xs shadow-purple-200/15 md:max-w-96;
   }
 
   /* Sidebar Component */
@@ -330,7 +343,7 @@
   }
 
   .sidebar-nav_element {
-    @apply flex-center p-16-semibold w-full whitespace-nowrap rounded-full bg-cover transition-all hover:bg-purple-100 hover:shadow-inner;
+    @apply flex-center p-16-semibold w-full whitespace-nowrap rounded-full bg-cover transition-all hover:bg-purple-100 hover:inset-shadow-sm;
   }
 
   .sidebar-link {
@@ -360,7 +373,7 @@
   }
 
   .transformed-placeholder {
-    @apply flex-center p-14-medium h-full min-h-72 flex-col gap-5 rounded-[16px] border border-dashed bg-purple-100/20 shadow-inner;
+    @apply flex-center p-14-medium h-full min-h-72 flex-col gap-5 rounded-[16px] border border-dashed bg-purple-100/20 inset-shadow-sm;
   }
 }
 

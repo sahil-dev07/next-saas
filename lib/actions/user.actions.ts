@@ -2,11 +2,13 @@
 
 import { revalidatePath } from "next/cache"
 
+import { auth } from "@clerk/nextjs/server" // Clerk v6: async auth() from /server
+
 import User from "../Database/models/user.model"
 
 import { connectToDatabase } from "../Database/mongoose"
 import { handleError } from "../utils"
-import { log } from "console"
+import { TRANSFORMATION_CREDIT_COST } from "../plans"
 
 // CREATE
 export async function createUser(user: CreateUserParams) {
@@ -40,10 +42,6 @@ export async function getUserById(userId: string) {
 export async function updateUser(clerkId: string, user: UpdateUserParams) {
   try {
     await connectToDatabase()
-    console.log({
-      clerkId,
-      user,
-    })
 
     const updatedUser = await User.findOneAndUpdate({ clerkId }, user, {
       new: true,
@@ -79,23 +77,62 @@ export async function deleteUser(clerkId: string) {
   }
 }
 
-// USE CREDITS
-export async function updateCredits(userId: string, creditFee: number) {
+// ─────────────────────────────────────────────────────────────────────────────
+// CREDIT ECONOMY (server-authoritative)
+//
+// The old `updateCredits(userId, delta)` was a client-callable action taking an
+// arbitrary user id + arbitrary delta with no auth — anyone could mint unlimited
+// credits. It is replaced by: an INTERNAL grant (webhook-only) and a PUBLIC spend
+// that resolves the caller from the Clerk session and can never go negative.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// INTERNAL grant helper — NOT exported, so the browser can never import/call it.
+// Only reached from the verified Stripe-webhook path (createTransaction).
+// `amount` is a positive integer of credits to add, keyed by the buyer's Mongo _id.
+async function grantCredits(userObjectId: string, amount: number) {
+  if (!Number.isInteger(amount) || amount <= 0) {
+    throw new Error("Invalid grant amount")
+  }
+  await connectToDatabase()
+
+  const updated = await User.findByIdAndUpdate(
+    userObjectId,
+    { $inc: { creditBalance: amount } },
+    { new: true }
+  )
+  if (!updated) throw new Error("Credit grant failed: buyer not found")
+  return JSON.parse(JSON.stringify(updated))
+}
+
+// Exported ONLY for the trusted transaction/webhook flow (transaction.action.ts).
+// Reached only after Stripe signature verification, so it is not a client attack surface.
+export async function creditBuyer(buyerObjectId: string, credits: number) {
+  return grantCredits(buyerObjectId, credits)
+}
+
+// PUBLIC server action used by the transformation flow. Takes NO client id and NO
+// client delta: the caller is resolved from the Clerk session and the fee is a
+// server constant. The decrement is a CONDITIONAL atomic $inc guarded by
+// { creditBalance: { $gte: cost } } so it can never drive a balance negative and
+// cannot be raced. Returns null when the user is out of credits (so the client can
+// show the insufficient-credits UX) instead of throwing.
+export async function spendCredits() {
   try {
-    // connection build
     await connectToDatabase()
 
-    // update credit balance
-    const updatedUserCredits = await User.findOneAndUpdate(
-      { _id: userId },
-      { $inc: { creditBalance: creditFee } },
+    const { userId: clerkId } = await auth() // Clerk v6: async
+    if (!clerkId) throw new Error("Not authenticated")
+
+    const cost = TRANSFORMATION_CREDIT_COST // server constant, positive int
+
+    const updated = await User.findOneAndUpdate(
+      { clerkId, creditBalance: { $gte: cost } },
+      { $inc: { creditBalance: -cost } },
       { new: true }
     )
 
-    // if updatedUserCredits doesn't exist
-    if (!updatedUserCredits) throw new Error("User credits update failed")
-    // deep clonning
-    return JSON.parse(JSON.stringify(updatedUserCredits))
+    if (!updated) return null // insufficient credits (or unknown user)
+    return JSON.parse(JSON.stringify(updated))
   } catch (error) {
     handleError(error)
   }

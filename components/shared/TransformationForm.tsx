@@ -1,18 +1,11 @@
 "use client"
 
-import { object, z } from "zod"
+import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { Button } from "@/components/ui/button"
-import {
-    Form,
-    FormControl,
-    FormDescription,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
-} from "@/components/ui/form"
+// Only <Form> is used directly here; the field primitives are wrapped inside <CustomField>.
+import { Form } from "@/components/ui/form"
 
 import {
     Select,
@@ -26,9 +19,9 @@ import {
 import { Input } from "@/components/ui/input"
 import { aspectRatioOptions, creditFee, defaultValues, transformationTypes } from "@/constants"
 import { CustomField } from "./CustomField"
-import { useEffect, useState, useTransition } from "react"
+import { useEffect, useMemo, useRef, useState, useTransition } from "react"
 import { AspectRatioKey, debounce, deepMergeObjects } from "@/lib/utils"
-import { updateCredits } from "@/lib/actions/user.actions"
+import { spendCredits } from "@/lib/actions/user.actions"
 import MediaUploader from "./MediaUploader"
 import TransformedImage from "./TransformedImage"
 import { getCldImageUrl } from "next-cloudinary"
@@ -48,7 +41,7 @@ export const formSchema = z.object({
 
 
 
-const TransformationForm = ({ action, data = null, userId, creditBalance, type, config = null }: TransformationFormProps) => {
+const TransformationForm = ({ action, data = null, creditBalance, type, config = null }: TransformationFormProps) => {
 
     const transformationType = transformationTypes[type]
     const [image, setImage] = useState(data)
@@ -56,9 +49,36 @@ const TransformationForm = ({ action, data = null, userId, creditBalance, type, 
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isTransforming, setIsTransforming] = useState(false)
     const [transformationConfig, setTransformationConfig] = useState(config)
-    const [isPending, startTransition] = useTransition()
+    // isPending is unused here; only startTransition is needed for onTransformHandler.
+    const [, startTransition] = useTransition()
     const router = useRouter()
     const { toast } = useToast()
+
+    // Pending field edits, keyed by transformation type then field. A REF (not state) so
+    // typing never re-renders; the debounced flush below drains it.
+    //
+    // Why accumulate instead of debouncing setNewTransformation directly: `recolor` has TWO
+    // inputs (prompt + color) that both route through onInputChangeHandler. One shared timer
+    // over one updater would let a keystroke in `color` cancel the still-pending `prompt`
+    // update, silently dropping it. (The original `debounce(fn,1000)()` never debounced at
+    // all — each call built a fresh timer — so it accidentally applied every edit.) Merging
+    // into a ref keeps a single real timer AND loses nothing.
+    const pendingEditsRef = useRef<Record<string, Record<string, string>>>({})
+
+    const flushPendingEdits = useMemo(
+        () => debounce(() => {
+            const pending = pendingEditsRef.current
+            pendingEditsRef.current = {}
+            setNewTransformation((prevState: any) => {
+                const next = { ...prevState }
+                for (const [transformType, fields] of Object.entries(pending)) {
+                    next[transformType] = { ...next[transformType], ...fields }
+                }
+                return next
+            })
+        }, 1000),
+        []
+    )
     const initialValues = data && action === 'Update' ? {
         title: data.title,
         aspectRatio: data.aspectRatio,
@@ -86,7 +106,6 @@ const TransformationForm = ({ action, data = null, userId, creditBalance, type, 
             });
             return;
         }
-        // console.log(values)
 
         setIsSubmitting(true);
 
@@ -106,7 +125,7 @@ const TransformationForm = ({ action, data = null, userId, creditBalance, type, 
                 height: image?.height,
                 config: transformationConfig,
                 secureURL: image?.secureURL,
-                transformationURL: transformationUrl,
+                transformationUrl: transformationUrl,
                 aspectRatio: values.aspectRatio,
                 prompt: values.prompt,
                 color: values.color,
@@ -116,7 +135,6 @@ const TransformationForm = ({ action, data = null, userId, creditBalance, type, 
                 try {
                     const newImage = await addImage({
                         image: imageData,
-                        userId,
                         path: '/'
                     })
 
@@ -126,7 +144,15 @@ const TransformationForm = ({ action, data = null, userId, creditBalance, type, 
                         router.push(`/transformations/${newImage._id}`)
                     }
                 } catch (error) {
-                    console.log(error);
+                    // Server action rethrew via handleError (auth/DB/validation). Surface it
+                    // to the user instead of silently swallowing to the console.
+                    console.error("addImage failed:", error);
+                    toast({
+                        title: "Couldn't save image",
+                        description: "Something went wrong. Please try again.",
+                        duration: 3000,
+                        className: "error-toast",
+                    });
                 }
             }
 
@@ -138,7 +164,6 @@ const TransformationForm = ({ action, data = null, userId, creditBalance, type, 
                             ...imageData,
                             _id: data._id
                         },
-                        userId,
                         path: `/transformations/${data._id}`
                     })
 
@@ -146,7 +171,14 @@ const TransformationForm = ({ action, data = null, userId, creditBalance, type, 
                         router.push(`/transformations/${updatedImage._id}`)
                     }
                 } catch (error) {
-                    console.log(error);
+                    // Same as Add: surface the rethrown server error via a toast.
+                    console.error("updateImage failed:", error);
+                    toast({
+                        title: "Couldn't update image",
+                        description: "Something went wrong. Please try again.",
+                        duration: 3000,
+                        className: "error-toast",
+                    });
                 }
             }
 
@@ -175,15 +207,11 @@ const TransformationForm = ({ action, data = null, userId, creditBalance, type, 
     }
 
     const onInputChangeHandler = (fieldName: string, value: string, type: string, onChangeField: (value: string) => void) => {
-        debounce(() => {
-            setNewTransformation((prevState: any) => ({
-                ...prevState,
-                [type]: {
-                    ...prevState?.[type],
-                    [fieldName === 'prompt' ? 'prompt' : 'to']: value
-                }
-            }))
-        }, 1000)();
+        // Record this field's latest value, then (re)arm the single shared timer. Edits to
+        // OTHER fields already recorded here survive — they flush together.
+        const key = fieldName === 'prompt' ? 'prompt' : 'to'
+        pendingEditsRef.current[type] = { ...(pendingEditsRef.current[type] ?? {}), [key]: value }
+        flushPendingEdits()
 
         return onChangeField(value)
     }
@@ -197,7 +225,37 @@ const TransformationForm = ({ action, data = null, userId, creditBalance, type, 
         setNewTransformation(null)
 
         startTransition(async () => {
-            await updateCredits(userId, creditFee)
+            // try/catch is required under React 19: an unhandled rejection inside an async
+            // transition is re-thrown during render and escalates to the root error boundary
+            // (app/error.tsx), unmounting the whole form and losing the user's uploaded image.
+            // (React 18 only logged an unhandled rejection.) spendCredits() returns null on
+            // insufficient credits but THROWS on auth/DB failure — both must roll the UI back.
+            try {
+                // Server resolves the user from the Clerk session and atomically spends the
+                // fee with a >= floor. No user id / delta is sent from the client anymore.
+                const result = await spendCredits()
+
+                // null === insufficient credits. Roll back the UI.
+                if (!result) {
+                    setIsTransforming(false)
+                    toast({
+                        title: "Not enough credits",
+                        description: "Buy more credits to keep transforming.",
+                        duration: 3000,
+                        className: "error-toast",
+                    })
+                }
+            } catch (error) {
+                // Auth expiry, DB blip, etc. Keep the form (and the upload) on screen.
+                setIsTransforming(false)
+                console.error("spendCredits failed:", error)
+                toast({
+                    title: "Transformation failed",
+                    description: "Something went wrong. Please try again.",
+                    duration: 3000,
+                    className: "error-toast",
+                })
+            }
         })
     }
 
