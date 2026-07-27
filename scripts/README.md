@@ -7,7 +7,7 @@ repo root so the npm aliases resolve.
 
 | Script | Alias | What it does | When to run |
 |---|---|---|---|
-| `backfill-timestamps.js` | `npm run backfill:timestamps` | Gives pre-existing image docs an `updatedAt`, copied from the legacy misspelled `updateAt` (falling back to `createdAt`). | **Once, at the `dev` → `main` production cutover.** Required for correct profile-page ordering — see below. |
+| `backfill-timestamps.js` | `npm run backfill:timestamps` | Gives pre-existing image docs an `updatedAt`, copied from the legacy misspelled `updateAt` (falling back to `createdAt`). Supports `--dry-run`. | **Once, at the `dev` → `main` production cutover.** Required for correct profile-page ordering — see below. |
 
 ## backfill-timestamps
 
@@ -20,12 +20,33 @@ Phase BUGS-2 moved the schema to `{ timestamps: true }`, so mongoose now maintai
 database still lacks the field and would sort as a null-key group.
 
 Run this once against production after deploying, to make the now-working sort correct for the
-whole collection:
+whole collection.
+
+**Preview first — this writes nothing:**
+
+```sh
+npm run backfill:timestamps -- --dry-run
+```
+
+It prints the total document count, how many are missing `updatedAt`, and a sample of up to 10
+documents showing the exact value that would be written and which field it came from. The
+preview is computed by running the real pipeline through an aggregation, so what you see is
+what you get — not a guess.
+
+**Then apply:**
 
 ```sh
 npm run backfill:timestamps
 ```
 
-It reports how many documents were missing the field, how many it modified, and verifies none
-remain. It does not drop the legacy `updateAt` field, so a rollback to the previous deploy
-still works.
+It reports how many documents matched and were modified, then re-counts to verify none remain.
+
+Safety properties, all covered by `__tests__/backfill-timestamps.test.ts`:
+
+- **Idempotent** — the filter matches only documents lacking a usable `updatedAt`, so a second
+  run is a no-op.
+- **Reversible** — it never drops the legacy `updateAt` field, so rolling back to the previous
+  deploy still works.
+- **Server-side clock** — the final fallback is `$$NOW`, not a client `new Date()`, so no local
+  clock skew is baked into the data.
+- **Version-safe** — uses nested 2-argument `$ifNull`; the N-ary form needs MongoDB ≥ 5.0.
