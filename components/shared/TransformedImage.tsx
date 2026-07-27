@@ -1,13 +1,21 @@
 "use client"
 import { CldImage, getCldImageUrl } from 'next-cloudinary'
 import Image from 'next/image'
-import React from 'react'
+import React, { useMemo } from 'react'
 import { dataUrl, debounce, download, getImageSize } from "@/lib/utils";
 import { PlaceholderValue } from "next/dist/shared/lib/get-img-props";
 import { useToast } from '../ui/use-toast';
 
 const TransformedImage = ({ image, type, title, isTransforming, setIsTransforming, transformationConfig, hasDownload = false }: TransformedImageProps) => {
     const { toast } = useToast();
+
+    // Stable 8s fallback: if the transformed image fails to load, stop the spinner.
+    // Memoized so repeated onError events share ONE timer — the old
+    // `debounce(fn, 8000)()` created a fresh debouncer per error and never coalesced.
+    const stopTransformingDebounced = useMemo(
+        () => debounce(() => setIsTransforming && setIsTransforming(false), 8000),
+        [setIsTransforming]
+    );
     const Downloadhandler = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
         e.preventDefault()
         toast({
@@ -23,7 +31,6 @@ const TransformedImage = ({ image, type, title, isTransforming, setIsTransformin
             ...transformationConfig,
         }), title)
     }
-    // console.log( "image public id ",image?.publicId)
 
     return (
         <>
@@ -63,11 +70,7 @@ const TransformedImage = ({ image, type, title, isTransforming, setIsTransformin
                             onLoad={() => {
                                 setIsTransforming && setIsTransforming(false)
                             }}
-                            onError={() => {
-                                debounce(() => {
-                                    setIsTransforming && setIsTransforming(false)
-                                }, 8000)()
-                            }}
+                            onError={() => stopTransformingDebounced()}
                             {...transformationConfig}
                         />
 

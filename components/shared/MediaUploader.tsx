@@ -43,9 +43,11 @@ const MediaUploader = ({
 
         onValueChange(result?.info?.public_id)
 
+        // Credits are spent on TRANSFORM (spendCredits), not on upload. The old copy
+        // ("One Credit was deducted") claimed a deduction that never happened here.
         toast({
-            title: 'Image uploaded Successfully',
-            description: 'One Credit was deducted from your account',
+            title: 'Image uploaded successfully',
+            description: 'Apply a transformation to enhance it.',
             duration: 3000,
             className: "success-toast"
         })

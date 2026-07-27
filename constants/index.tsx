@@ -47,10 +47,14 @@ export const plans = [
         name: "Free",
         icon: "/assets/icons/free-plan.svg",
         price: 0,
-        credits: 20,
+        // Must match the User model's `creditBalance` default (2) — that is the ONLY
+        // place new users actually receive starter credits (the free plan is never
+        // "purchased", so this value is display copy, not a grant). Was 20, which
+        // advertised credits users never got.
+        credits: 2,
         inclusions: [
             {
-                label: "20 Free Credits",
+                label: "2 Free Credits",
                 isIncluded: true,
             },
             {

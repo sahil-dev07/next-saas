@@ -7,7 +7,8 @@ import User from "../Database/models/user.model"
 import Image from "../Database/models/image.model"
 import { redirect } from "next/navigation"
 import { v2 as cloudinary } from 'cloudinary'
-import { AwardIcon } from "lucide-react"
+import { auth } from "@clerk/nextjs/server" // Clerk v6: async auth() from /server
+
 const populateUser = (query: any) => {
 
     return query.populate({
@@ -18,19 +19,45 @@ const populateUser = (query: any) => {
 
 }
 
+// Resolve the Clerk-authenticated caller to their Mongo user.
+// Central owner-identity source for all mutating image actions (kills IDOR):
+// ownership is always checked against this, never a client-supplied userId.
+const getAuthUser = async () => {
+    const { userId: clerkId } = await auth()
+    if (!clerkId) throw new Error("Not authenticated")
+    const user = await User.findOne({ clerkId })
+    if (!user) throw new Error("User not found")
+    return user
+}
+
+// Whitelist of client-writable image fields — prevents mass-assignment via raw
+// spread (a client could otherwise inject `author`/`_id`). `transformationUrl` is
+// the canonical key (matches the mongoose schema).
+const pickImageFields = (image: any) => ({
+    title: image.title,
+    publicId: image.publicId,
+    transformationType: image.transformationType,
+    width: image.width,
+    height: image.height,
+    config: image.config,
+    secureURL: image.secureURL,
+    transformationUrl: image.transformationUrl,
+    aspectRatio: image.aspectRatio,
+    prompt: image.prompt,
+    color: image.color,
+})
+
 // ADD IMAGE
-export async function addImage({ image, userId, path }: AddImageParams) {
+export async function addImage({ image, path }: AddImageParams) {
 
     try {
         await connectToDatabase()
 
-        const author = await User.findById(userId)
-
-        if (!author)
-            throw new Error("User not found")
+        // Owner is the authenticated caller, not a client-sent userId.
+        const author = await getAuthUser()
 
         const newImage = await Image.create({
-            ...image,
+            ...pickImageFields(image),
             author: author._id
         })
 
@@ -43,20 +70,21 @@ export async function addImage({ image, userId, path }: AddImageParams) {
 }
 
 // UPDATE IMAGE
-export async function updateImage({ image, userId, path }: UpdateImageParams) {
+export async function updateImage({ image, path }: UpdateImageParams) {
 
     try {
         await connectToDatabase()
 
-        const imageToUpadate = await Image.findById(image._id)
+        const author = await getAuthUser()
+        const imageToUpdate = await Image.findById(image._id)
 
-        if (!imageToUpadate || imageToUpadate.author.toHexString() != userId)
-            throw new Error("Unauthorised or Image not found")
+        // Ownership = resource.author === auth-derived _id (compare as strings).
+        if (!imageToUpdate || String(imageToUpdate.author) !== String(author._id))
+            throw new Error("Unauthorized or image not found")
 
         const updatedImage = await Image.findByIdAndUpdate(
-            // image._id,
-            imageToUpadate._id,
-            image,
+            imageToUpdate._id,
+            pickImageFields(image), // no raw spread — author/_id can't be overwritten
             { new: true }
         )
 
@@ -71,25 +99,31 @@ export async function updateImage({ image, userId, path }: UpdateImageParams) {
 // Delete IMAGE
 export async function deleteImage(imageId: string) {
 
+    let deleted = false
     try {
         await connectToDatabase()
 
-
+        const author = await getAuthUser()
         const imageToDelete = await Image.findById(imageId)
 
         if (!imageToDelete)
             throw new Error("Image not found")
 
+        // IDOR guard: only the owner may delete.
+        if (String(imageToDelete.author) !== String(author._id))
+            throw new Error("Unauthorized")
+
         await Image.findByIdAndDelete(imageId)
-
-
-        // await Image.findByIdAndDelete(imageId)
-
+        revalidatePath("/")
+        deleted = true
     } catch (error) {
         handleError(error)
-    } finally {
-        redirect('/')
     }
+
+    // redirect() throws NEXT_REDIRECT internally, so it must run OUTSIDE try/catch —
+    // otherwise handleError swallows the control-flow throw and no navigation happens.
+    // Only redirect on a real delete; on error handleError already threw.
+    if (deleted) redirect('/')
 }
 
 // GET IMAGE
@@ -128,8 +162,13 @@ export async function getAllImage({ limit = 9, page = 1, searchQuery = '' }: {
 
         let expression = 'folder=imaginify'
 
-        if (searchQuery)
-            expression += `AND ${searchQuery}`
+        if (searchQuery) {
+            // Escape backslashes/quotes so a user query can't break out of the
+            // Cloudinary search expression (injection). Note the LEADING SPACE before
+            // AND — the original produced "imaginifyAND <q>" (invalid, never matched).
+            const safe = String(searchQuery).replace(/\\/g, "\\\\").replace(/"/g, '\\"')
+            expression += ` AND "${safe}"`
+        }
 
         const { resources } = await cloudinary.search
             .expression(expression)
@@ -153,10 +192,8 @@ export async function getAllImage({ limit = 9, page = 1, searchQuery = '' }: {
             .skip(skipAmount)
             .limit(limit)
 
-        const totalImages: any = await Image.find(query).countDocuments()
+        const totalImages: number = await Image.find(query).countDocuments()
         const savedImages = await Image.find().countDocuments()
-        // console.log("total Images : ",totalImages)
-        // console.log("saved Images : ",savedImages)
         return {
             data: JSON.parse(JSON.stringify(images)),
             totalPage: Math.ceil(totalImages / limit),
@@ -183,7 +220,10 @@ export async function getUserImages({ limit = 9, page = 1, userId }: {
             .skip(skipAmount)
             .limit(limit)
 
-        const totalImages: any = await Image.find({ author: userId }).countDocuments
+        // NOTE: countDocuments() must be CALLED — the original omitted the parens,
+        // awaiting the function reference, so totalPage was Math.ceil(NaN) = NaN and
+        // profile pagination never rendered.
+        const totalImages: number = await Image.countDocuments({ author: userId })
 
         return {
             data: JSON.parse(JSON.stringify(images)),
