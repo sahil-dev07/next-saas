@@ -13,12 +13,14 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useToast } from "@/components/ui/use-toast";
 import { deleteImage } from "@/lib/actions/image.actions";
 
 import { Button } from "../ui/button";
 
 export const DeleteConfirmation = ({ imageId }: { imageId: string }) => {
     const [isPending, startTransition] = useTransition();
+    const { toast } = useToast();
 
     return (
         <AlertDialog>
@@ -48,7 +50,24 @@ export const DeleteConfirmation = ({ imageId }: { imageId: string }) => {
                         className="border bg-red-500 text-white hover:bg-red-600"
                         onClick={() =>
                             startTransition(async () => {
-                                await deleteImage(imageId);
+                                // try/catch is required under React 19: a rejected async
+                                // transition is re-thrown during render and escalates to the
+                                // root error boundary (app/error.tsx), replacing the page with
+                                // the error screen. (React 18 only logged it.) deleteImage
+                                // rethrows via handleError on auth/IDOR/not-found failures; the
+                                // success path redirects server-side and never reaches here.
+                                try {
+                                    await deleteImage(imageId);
+                                } catch (error) {
+                                    console.error("deleteImage failed:", error);
+                                    toast({
+                                        title: "Delete failed",
+                                        description:
+                                            "Could not delete this image. Please try again.",
+                                        duration: 3000,
+                                        className: "error-toast",
+                                    });
+                                }
                             })
                         }
                     >
