@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs";
+import { auth } from "@clerk/nextjs/server";
 import Image from "next/image";
 import { redirect } from "next/navigation";
 
@@ -7,9 +7,14 @@ import Header from "@/components/shared/Header";
 import { getUserImages } from "@/lib/actions/image.actions";
 import { getUserById } from "@/lib/actions/user.actions";
 
-const Profile = async ({ searchParams }: SearchParamProps) => {
-    const page = Number(searchParams?.page) || 1;
-    const { userId } = auth();
+// Next 15: `searchParams` is a Promise and must be awaited. Typed inline instead of the old
+// shared `SearchParamProps` alias, whose non-Promise param/searchParam types Next 15 rejects.
+const Profile = async ({ searchParams }: {
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) => {
+    const resolvedSearchParams = await searchParams;
+    const page = Number(resolvedSearchParams?.page) || 1;
+    const { userId } = await auth();
 
     if (!userId) redirect("/sign-in");
 
