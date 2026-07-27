@@ -11,7 +11,14 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 // ERROR HANDLER
-export const handleError = (error: unknown) => {
+// Typed `never` so callers' return types stop being widened to `T | undefined` — a
+// `catch { handleError(e) }` is recognised as unreachable-after.
+//
+// The annotation MUST live on the const, not on the arrow (`= (e: unknown): never =>`).
+// TypeScript only applies never-returning-call control-flow analysis when the callee is a
+// function declaration or a const with an explicit type annotation; annotating just the
+// arrow's return type compiles but delivers none of the narrowing.
+export const handleError: (error: unknown) => never = (error) => {
   if (error instanceof Error) {
     // This is a native JavaScript error (e.g., TypeError, RangeError)
     console.error(error.message);
@@ -85,11 +92,18 @@ export function removeKeysFromQuery({
 }
 
 // DEBOUNCE
-export const debounce = (func: (...args: any[]) => void, delay: number) => {
+// Returns ONE stable wrapper with a single shared timer. Callers MUST keep the
+// returned function stable across renders (e.g. wrap in `useMemo`) — creating a
+// fresh wrapper per call (the old `debounce(fn, d)()` pattern) gives every call its
+// own timer, so nothing is ever coalesced and it never actually debounces.
+export const debounce = <A extends unknown[]>(
+  func: (...args: A) => void,
+  delay: number
+) => {
   let timeoutId: NodeJS.Timeout | null;
-  return (...args: any[]) => {
+  return (...args: A) => {
     if (timeoutId) clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => func.apply(null, args), delay);
+    timeoutId = setTimeout(() => func(...args), delay);
   };
 };
 
@@ -127,7 +141,7 @@ export const download = (url: string, filename: string) => {
       document.body.appendChild(a);
       a.click();
     })
-    .catch((error) => console.log({ error }));
+    .catch((error) => console.error("Download failed:", error));
 };
 
 // DEEP MERGE OBJECTS

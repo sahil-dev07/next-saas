@@ -93,5 +93,7 @@ module.exports = {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  // Tailwind v4: animation utilities (animate-in/out, fade, zoom, slide) now come
+  // from `@import "tw-animate-css"` in globals.css, not a JS plugin. No plugins needed here.
+  plugins: [],
 };
